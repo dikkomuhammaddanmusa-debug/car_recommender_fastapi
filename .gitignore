@@ -1,6 +1,19 @@
-.venv/
+# Python
 __pycache__/
+*.pyc
+*.pyo
+
+# Virtualenv
+.venv/
+
+# SQLite locally (Render uses /var/data/app.db)
 app.db
-uploads/
-.env
+
+# Node / Expo (if any here)
+node_modules/
+
+# OS
 .DS_Store
+
+# App uploads (server-side)
+uploads/

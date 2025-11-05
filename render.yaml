@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: carrec-api
+    env: python
+    region: frankfurt
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: DATABASE_URL
+        value: "sqlite:////var/data/app.db"
+      - key: ALLOW_ORIGINS
+        value: "*"
+    healthCheckPath: /api/v1/health
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
+    autoDeploy: true
