@@ -1,61 +1,40 @@
-from fastapi import APIRouter, Depends
-from typing import List
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from src.database import session_scope
-from src.schemas import CarOut, SearchFilters, RecommendRequest
-from src.crud import list_cars, create_search_log
-from src.recommender import rank_cars
-from src.utils import dedup_cars
+from src.database import get_db
+from src.models import Car
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1/cars", tags=["cars"])
 
-def get_db():
-    with session_scope() as s:
-        yield s
-
-@router.get("/search", response_model=List[CarOut])
+@router.get("/search")
 def search_cars(
-    brand: str | None = None,
-    transmission: str | None = None,
-    fuel: str | None = None,
-    min_year: int | None = None,
-    max_year: int | None = None,
-    min_price: float | None = None,
-    max_price: float | None = None,
-    max_mileage: float | None = None,
-    # pagination + sorting
-    limit: int = 20,
-    offset: int = 0,
-    sort: str = "year",   # year|price|mileage|brand|model
-    order: str = "desc",  # asc|desc
-    # NEW: optional dedup for search
-    dedup: bool = False,
+    brand: str | None = Query(None),
+    model: str | None = Query(None),
+    year_min: int | None = Query(None, alias="yearMin"),
+    year_max: int | None = Query(None, alias="yearMax"),
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
-    limit = max(1, min(limit, 100))
-    offset = max(0, offset)
-    if sort not in {"year","price","mileage","brand","model"}:
-        sort = "year"
-    if order.lower() not in {"asc","desc"}:
-        order = "desc"
-
-    filters = SearchFilters(
-        brand=brand, transmission=transmission, fuel=fuel,
-        min_year=min_year, max_year=max_year, min_price=min_price,
-        max_price=max_price, max_mileage=max_mileage,
-    )
-    cars = list_cars(db, filters, sort_by=sort, order=order.lower(), limit=limit, offset=offset)
-    if dedup:
-        cars = dedup_cars(cars)
-    create_search_log(db, query="/search", filters=filters.model_dump_json(), results_count=len(cars))
-    return cars
-
-@router.post("/recommend", response_model=List[CarOut])
-def recommend(req: RecommendRequest, db: Session = Depends(get_db)):
-    # Fetch ALL matches (no pagination), then dedup + rank
-    cars = list_cars(db, req.filters, limit=None)
-    cars = dedup_cars(cars)          # ensure duplicates collapsed
-    ranked = rank_cars(cars, req.weights)
-    topk = [c for _, c in ranked[: req.top_k]]
-    create_search_log(db, query="/recommend", filters=req.model_dump_json(), results_count=len(topk))
-    return topk
+    q = db.query(Car)
+    if brand:
+        q = q.filter(Car.brand.ilike(f"%{brand}%"))
+    if model:
+        q = q.filter(Car.model.ilike(f"%{model}%"))
+    if year_min is not None:
+        q = q.filter(Car.year >= year_min)
+    if year_max is not None:
+        q = q.filter(Car.year <= year_max)
+    return [
+        {
+            "id": c.id,
+            "brand": c.brand,
+            "model": c.model,
+            "year": c.year,
+            "price": c.price,
+            "mileage": c.mileage,
+            "fuel": c.fuel,
+            "transmission": c.transmission,
+            "display_name": c.display_name,
+            "image_url": getattr(c, "image_url", None),
+        }
+        for c in q.limit(min(limit, 200)).all()
+    ]
