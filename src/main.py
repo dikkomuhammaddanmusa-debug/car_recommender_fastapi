@@ -1,3 +1,4 @@
+from src.database import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import engine, Base
@@ -39,3 +40,16 @@ def health():
 
 app.include_router(cars_router, prefix="/api/v1/cars", tags=["cars"])
 app.include_router(uploads_router, prefix="/api/v1/upload", tags=["uploads"])
+
+origins = [
+    "http://localhost:19006",
+    "http://localhost:8081",
+    "exp://", "exps://",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
