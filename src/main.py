@@ -1,4 +1,7 @@
 from src.database import init_db
+from src.seed import maybe_seed
+from src.api.v1.cars import router as cars_router
+from src.api.v1.recommend import router as recommend_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import engine, Base
@@ -16,6 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Health check for Render
+app.include_router(cars_router)
+app.include_router(recommend_router)
+
 @app.get("/api/v1/health")
 def health():
     return {"status": "ok"}
@@ -33,6 +39,9 @@ def on_startup():
 def home():
     # Redirect root to Swagger UI
     return RedirectResponse(url="/docs")
+
+app.include_router(cars_router)
+app.include_router(recommend_router)
 
 @app.get("/api/v1/health")
 def health():
