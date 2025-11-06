@@ -1,30 +1,15 @@
-from src.core.config import DATABASE_URL
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from src.core.config import DATABASE_URL
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+os.makedirs("/tmp", exist_ok=True)
+
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 
-engine = os.makedirs('/tmp', exist_ok=True)
-create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
-from contextlib import contextmanager
-
-@contextmanager
-def session_scope():
-    session = SessionLocal()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
 
 def get_db():
     db = SessionLocal()
@@ -33,7 +18,6 @@ def get_db():
     finally:
         db.close()
 
-
 def init_db():
-    from src import models
+    from src import models  # ensure models are imported
     Base.metadata.create_all(bind=engine)

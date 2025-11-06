@@ -8,20 +8,8 @@ class Car(Base):
     model = Column(String, index=True)
     year = Column(Integer, index=True)
     price = Column(Float, index=True)
-    mileage = Column(Float, index=True)
-    transmission = Column(String, index=True)
-    fuel = Column(String, index=True)
+    mileage = Column(Integer, index=True)
+    fuel = Column(String)
+    transmission = Column(String)
+    display_name = Column(String, index=True)
     image_url = Column(String, nullable=True)
-
-class Upload(Base):
-    __tablename__ = "uploads"
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String)
-    stored_path = Column(String)
-
-class SearchLog(Base):
-    __tablename__ = "search_logs"
-    id = Column(Integer, primary_key=True, index=True)
-    query = Column(String)
-    filters = Column(String)
-    results_count = Column(Integer)
